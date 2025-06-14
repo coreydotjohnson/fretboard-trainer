@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Guitar Interval Trainer</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    .fretboard { display: grid; grid-template-columns: repeat(13, 60px); gap: 4px; justify-content: center; }
+    .string { display: contents; }
+    .note { padding: 8px; border: 1px solid #ccc; cursor: pointer; background: #f9f9f9; }
+    .note.selected { background: #cce5ff; }
+    .note.target { background: #d4edda; }
+    #intervalDisplay { margin-top: 1rem; font-size: 1.2rem; }
+  </style>
+</head>
+<body>
+  <h1>Guitar Fretboard Interval Trainer</h1>
+  <p>Click a note to set the root, then another note to see the interval.</p>
+  <div class="fretboard" id="fretboard"></div>
+  <div id="intervalDisplay"></div>
+
+  <script>
+    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const tuning = ['E', 'B', 'G', 'D', 'A', 'E']; // from high to low
+
+    const fretboard = document.getElementById('fretboard');
+    const intervalDisplay = document.getElementById('intervalDisplay');
+
+    let rootNote = null;
+    let targetNote = null;
+
+    function getNoteAt(start, fret) {
+      const startIndex = notes.indexOf(start);
+      return notes[(startIndex + fret) % 12];
+    }
+
+    function getInterval(root, target) {
+      const semitones = (notes.indexOf(target) - notes.indexOf(root) + 12) % 12;
+      const intervalNames = [
+        'Unison', 'Minor 2nd', 'Major 2nd', 'Minor 3rd', 'Major 3rd',
+        'Perfect 4th', 'Tritone', 'Perfect 5th', 'Minor 6th', 'Major 6th',
+        'Minor 7th', 'Major 7th'
+      ];
+      return intervalNames[semitones];
+    }
+
+    function renderFretboard() {
+      fretboard.innerHTML = '';
+      tuning.forEach((openNote, stringIndex) => {
+        for (let fret = 0; fret <= 12; fret++) {
+          const note = getNoteAt(openNote, fret);
+          const noteDiv = document.createElement('div');
+          noteDiv.className = 'note';
+          noteDiv.innerText = note;
+          noteDiv.dataset.note = note;
+          noteDiv.dataset.string = stringIndex;
+          noteDiv.dataset.fret = fret;
+          noteDiv.addEventListener('click', () => handleNoteClick(noteDiv));
+          fretboard.appendChild(noteDiv);
+        }
+      });
+    }
+
+    function handleNoteClick(div) {
+      const note = div.dataset.note;
+      if (!rootNote) {
+        rootNote = note;
+        div.classList.add('selected');
+        intervalDisplay.innerText = `Root note set: ${note}`;
+      } else if (!targetNote) {
+        targetNote = note;
+        div.classList.add('target');
+        const interval = getInterval(rootNote, targetNote);
+        intervalDisplay.innerText = `Interval from ${rootNote} to ${targetNote}: ${interval}`;
+      } else {
+        rootNote = null;
+        targetNote = null;
+        document.querySelectorAll('.note').forEach(n => n.classList.remove('selected', 'target'));
+        intervalDisplay.innerText = '';
+      }
+    }
+
+    renderFretboard();
+  </script>
+</body>
+</html>
