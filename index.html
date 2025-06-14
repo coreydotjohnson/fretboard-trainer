@@ -4,7 +4,8 @@
   <meta charset="UTF-8">
   <title>Guitar Interval Trainer</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 2rem; }
+    body {
+    box-sizing: border-box; font-family: sans-serif; text-align: center; padding: 2rem; }
     .controls { margin-bottom: 1rem; }
     .fretboard-wrapper {
       display: inline-block;
@@ -52,7 +53,12 @@
     #intervalDisplay { margin-top: 1rem; font-size: 1.2rem; }
     #abbrToggleLabel, #symbolToggleLabel { margin-right: 1rem; font-size: 0.95rem; }
     #displayModeLabel { margin-left: 1rem; font-size: 0.95rem; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
+    button {
+      margin: 1rem auto;
+      display: block;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
     @media (max-width: 768px) {
       .note { padding: 6px; font-size: 0.85rem; }
     }
@@ -66,35 +72,102 @@
 <body>
   <h1>Guitar Fretboard Interval Trainer</h1>
   <p id="instructionText" style="font-weight: bold; font-size: 1.1rem; color: #003366; background-color: #e6f2ff; padding: 0.5rem; border-radius: 6px;">Click a note to set the root, then another note to see the interval.</p>
-  <label id="keepRootLabel">
-      <input type="checkbox" id="keepRootNote">
-      Keep root note label when using interval symbols
-    </label>
-    <label id="abbrToggleLabel">
-      <input type="checkbox" id="abbrToggle">
-      Use interval abbreviations
-    </label>
-    <label id="symbolToggleLabel">
-      <input type="checkbox" id="symbolToggle">
-      Use symbolic notation (♭, △, p)
-    </label>
+  <fieldset style="margin-top: 1rem; border: 1px solid #ccc; padding: 0.5rem 1rem; display: inline-block; text-align: left;">
+      <legend><strong>Interval Display Options</strong></legend>
+      <label id="abbrToggleLabel"><input type="checkbox" id="abbrToggle"> Use interval abbreviations</label>
+      <label id="symbolToggleLabel"><input type="checkbox" id="symbolToggle"> Use symbolic notation</label>
+      <label id="keepRootLabel"><input type="checkbox" id="keepRootNote"> Keep root note label when using interval symbols</label>
+    </fieldset>
     <label id="displayModeLabel">
-      Display mode:
+      Note name style:
       <select id="noteDisplayMode">
         <option value="sharp">Sharps (C#)</option>
         <option value="flat">Flats (Db)</option>
         <option value="both">Both (C#/Db)</option>
               </select>
     </label>
-    <button onclick="resetFretboard()">Reset</button>
-  </div>
+    <button id="resetButton">Reset</button>
   <div class="fretboard-wrapper" style="margin: 0 auto;">
     <div class="fretboard" id="fretboard"></div>
   </div>
   <div id="intervalDisplay"></div>
 
   <script>
-    window.addEventListener('DOMContentLoaded', () => {
+    function resetFretboard() {
+  rootNote = null;
+  rootNoteAbs = null;
+  targetNote = null;
+  intervalDisplay.innerText = '';
+  instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
+  renderFretboard();
+}
+
+function renderFretboard() {
+  fretboard.innerHTML = '';
+  const mode = displayMode.value;
+  const showFlats = mode === 'flat' || mode === 'both';
+  const showBoth = mode === 'both';
+  const showIntervalSymbols = abbrToggle.checked || symbolToggle.checked;
+
+  if ((abbrToggle.checked || symbolToggle.checked) && !rootNoteAbs) {
+    instructionText.innerText = 'Click a note to set the root note.';
+  } else if (!targetNote) {
+    instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
+  }
+
+  fretboard.appendChild(document.createElement('div'));
+  for (let fret = 0; fret <= 12; fret++) {
+    const label = document.createElement('div');
+    label.className = 'fret-label';
+    label.innerText = fret;
+    fretboard.appendChild(label);
+  }
+
+  tuning.forEach((openNote, stringIndex) => {
+    const stringLabel = document.createElement('div');
+    stringLabel.className = 'string-label';
+    stringLabel.innerText = openNote;
+    stringLabel.style.visibility = 'hidden';
+    fretboard.appendChild(stringLabel);
+
+    for (let fret = 0; fret <= 12; fret++) {
+      const sharp = getNoteAt(openNote, fret, false);
+      const flat = getNoteAt(openNote, fret, true);
+
+      const noteDiv = document.createElement('div');
+      noteDiv.className = 'note';
+      if (fret === 0) noteDiv.classList.add('fret-zero');
+      if (dotFrets.includes(fret)) noteDiv.classList.add('dot-marker');
+      if (sharp === rootNoteAbs) noteDiv.classList.add('root');
+      if (sharp === targetNote) noteDiv.classList.add('target');
+
+      noteDiv.dataset.note = sharp;
+      noteDiv.dataset.string = stringIndex;
+      noteDiv.dataset.fret = fret;
+
+      if (showIntervalSymbols && rootNoteAbs) {
+        const rootIdx = sharpNotes.indexOf(rootNoteAbs);
+        const noteIdx = sharpNotes.indexOf(sharp);
+        const semitones = (noteIdx - rootIdx + 12) % 12;
+
+        const interval = symbolToggle.checked
+          ? intervals[semitones].symbol
+          : abbrToggle.checked
+          ? intervals[semitones].abbr
+          : intervals[semitones].name;
+
+        noteDiv.innerText = (keepRootNote.checked && semitones === 0) ? sharp : interval;
+      } else {
+        noteDiv.innerText = showBoth && sharp !== flat ? `${sharp}/${flat}` : (showFlats ? flat : sharp);
+      }
+
+      noteDiv.addEventListener('click', () => handleNoteClick(noteDiv));
+      fretboard.appendChild(noteDiv);
+    }
+  });
+}
+
+window.addEventListener('DOMContentLoaded', () => {
       const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       const flatNotes  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
       const tuning = ['E', 'B', 'G', 'D', 'A', 'E'];
@@ -122,6 +195,7 @@
       const displayMode = document.getElementById('noteDisplayMode');
       const keepRootNote = document.getElementById('keepRootNote');
       const instructionText = document.getElementById('instructionText');
+      const resetBtn = document.getElementById('resetButton');
 
       let rootNote = null;
       let rootNoteAbs = null;
@@ -254,6 +328,8 @@
       }
 
       displayMode.addEventListener('change', resetFretboard);
+      resetBtn.addEventListener('click', resetFretboard);
+      keepRootNote.addEventListener('change', renderFretboard);
 
       abbrToggle.addEventListener('change', () => {
         if (abbrToggle.checked) symbolToggle.checked = false;
@@ -264,12 +340,8 @@
         if (symbolToggle.checked) abbrToggle.checked = false;
         resetFretboard();
       });
-      renderFretboard();
-      window.resetFretboard = resetFretboard;
 
-      keepRootNote.addEventListener('change', () => {
-        renderFretboard();
-      });
+      renderFretboard();
     });
   </script>
 </body>
