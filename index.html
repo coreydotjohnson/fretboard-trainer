@@ -93,81 +93,7 @@
   <div id="intervalDisplay"></div>
 
   <script>
-    function resetFretboard() {
-  rootNote = null;
-  rootNoteAbs = null;
-  targetNote = null;
-  intervalDisplay.innerText = '';
-  instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
-  renderFretboard();
-}
-
-function renderFretboard() {
-  fretboard.innerHTML = '';
-  const mode = displayMode.value;
-  const showFlats = mode === 'flat' || mode === 'both';
-  const showBoth = mode === 'both';
-  const showIntervalSymbols = abbrToggle.checked || symbolToggle.checked;
-
-  if ((abbrToggle.checked || symbolToggle.checked) && !rootNoteAbs) {
-    instructionText.innerText = 'Click a note to set the root note.';
-  } else if (!targetNote) {
-    instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
-  }
-
-  fretboard.appendChild(document.createElement('div'));
-  for (let fret = 0; fret <= 12; fret++) {
-    const label = document.createElement('div');
-    label.className = 'fret-label';
-    label.innerText = fret;
-    fretboard.appendChild(label);
-  }
-
-  tuning.forEach((openNote, stringIndex) => {
-    const stringLabel = document.createElement('div');
-    stringLabel.className = 'string-label';
-    stringLabel.innerText = openNote;
-    stringLabel.style.visibility = 'hidden';
-    fretboard.appendChild(stringLabel);
-
-    for (let fret = 0; fret <= 12; fret++) {
-      const sharp = getNoteAt(openNote, fret, false);
-      const flat = getNoteAt(openNote, fret, true);
-
-      const noteDiv = document.createElement('div');
-      noteDiv.className = 'note';
-      if (fret === 0) noteDiv.classList.add('fret-zero');
-      if (dotFrets.includes(fret)) noteDiv.classList.add('dot-marker');
-      if (sharp === rootNoteAbs) noteDiv.classList.add('root');
-      if (sharp === targetNote) noteDiv.classList.add('target');
-
-      noteDiv.dataset.note = sharp;
-      noteDiv.dataset.string = stringIndex;
-      noteDiv.dataset.fret = fret;
-
-      if (showIntervalSymbols && rootNoteAbs) {
-        const rootIdx = sharpNotes.indexOf(rootNoteAbs);
-        const noteIdx = sharpNotes.indexOf(sharp);
-        const semitones = (noteIdx - rootIdx + 12) % 12;
-
-        const interval = symbolToggle.checked
-          ? intervals[semitones].symbol
-          : abbrToggle.checked
-          ? intervals[semitones].abbr
-          : intervals[semitones].name;
-
-        noteDiv.innerText = (keepRootNote.checked && semitones === 0) ? sharp : interval;
-      } else {
-        noteDiv.innerText = showBoth && sharp !== flat ? `${sharp}/${flat}` : (showFlats ? flat : sharp);
-      }
-
-      noteDiv.addEventListener('click', () => handleNoteClick(noteDiv));
-      fretboard.appendChild(noteDiv);
-    }
-  });
-}
-
-window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', () => {
       const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       const flatNotes  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
       const tuning = ['E', 'B', 'G', 'D', 'A', 'E'];
@@ -217,6 +143,55 @@ window.addEventListener('DOMContentLoaded', () => {
         return intervals[semitones].name;
       }
 
+      function handleNoteClick(div) {
+        const note = div.dataset.note;
+
+        if (abbrToggle.checked || symbolToggle.checked) {
+          rootNote = note;
+          rootNoteAbs = note;
+          targetNote = null;
+          intervalDisplay.innerText = `Root note set: ${note}`;
+          instructionText.innerText = 'Click a note to set the root note.';
+          renderFretboard();
+          return;
+        }
+
+        const mode = displayMode.value;
+
+        if (mode === 'interval') {
+          rootNote = note;
+          rootNoteAbs = note;
+          intervalDisplay.innerText = `Root note set: ${note}`;
+          renderFretboard();
+          return;
+        }
+
+        if (!rootNoteAbs) {
+          rootNote = note;
+          rootNoteAbs = note;
+          targetNote = null;
+          intervalDisplay.innerText = `Root note set: ${note}`;
+          renderFretboard();
+        } else {
+          targetNote = note;
+          const interval = getInterval(rootNoteAbs, targetNote);
+          intervalDisplay.innerText = `Interval from ${rootNoteAbs} to ${targetNote}: ${interval}`;
+          instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
+          renderFretboard();
+        }
+      }
+
+      function resetFretboard() {
+        rootNote = null;
+        rootNoteAbs = null;
+        targetNote = null;
+        intervalDisplay.innerText = '';
+        instructionText.innerText = (abbrToggle.checked || symbolToggle.checked)
+          ? 'Click a note to set the root note.'
+          : 'Click a note to set the root, then another note to see the interval.';
+        renderFretboard();
+      }
+
       function renderFretboard() {
         fretboard.innerHTML = '';
         const mode = displayMode.value;
@@ -224,7 +199,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const showBoth = mode === 'both';
         const showIntervalSymbols = abbrToggle.checked || symbolToggle.checked;
 
-        if ((abbrToggle.checked || symbolToggle.checked) && !rootNoteAbs) {
+        if ((abbrToggle.checked || symbolToggle.checked)) {
           instructionText.innerText = 'Click a note to set the root note.';
         } else if (!targetNote) {
           instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
@@ -280,51 +255,6 @@ window.addEventListener('DOMContentLoaded', () => {
             fretboard.appendChild(noteDiv);
           }
         });
-      }
-
-      function handleNoteClick(div) {
-        const note = div.dataset.note;
-
-        if (abbrToggle.checked || symbolToggle.checked) {
-          rootNote = note;
-          rootNoteAbs = note;
-          targetNote = null;
-          intervalDisplay.innerText = `Root note set: ${note}`;
-          renderFretboard();
-          return;
-        }
-
-        const mode = displayMode.value;
-
-        if (mode === 'interval') {
-          rootNote = note;
-          rootNoteAbs = note;
-          intervalDisplay.innerText = `Root note set: ${note}`;
-          renderFretboard();
-          return;
-        }
-
-        if (!rootNoteAbs) {
-          rootNote = note;
-          rootNoteAbs = note;
-          targetNote = null;
-          intervalDisplay.innerText = `Root note set: ${note}`;
-          renderFretboard();
-        } else {
-          targetNote = note;
-          const interval = getInterval(rootNoteAbs, targetNote);
-          intervalDisplay.innerText = `Interval from ${rootNoteAbs} to ${targetNote}: ${interval}`;
-          renderFretboard();
-        }
-      }
-
-      function resetFretboard() {
-        rootNote = null;
-        rootNoteAbs = null;
-        targetNote = null;
-        intervalDisplay.innerText = '';
-        instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
-        renderFretboard();
       }
 
       displayMode.addEventListener('change', resetFretboard);
