@@ -11,7 +11,7 @@
     .note.selected { background: #cce5ff; }
     .note.target { background: #d4edda; }
     #intervalDisplay { margin-top: 1rem; font-size: 1.2rem; }
-    #abbrToggleLabel { margin-bottom: 1rem; display: inline-block; font-size: 0.95rem; }
+    #abbrToggleLabel, #symbolToggleLabel { margin-bottom: 1rem; display: inline-block; font-size: 0.95rem; margin-right: 1rem; }
   </style>
 </head>
 <body>
@@ -21,6 +21,10 @@
     <input type="checkbox" id="abbrToggle">
     Use interval abbreviations
   </label>
+  <label id="symbolToggleLabel">
+    <input type="checkbox" id="symbolToggle">
+    Use symbolic notation (♭, △, p)
+  </label>
   <div class="fretboard" id="fretboard"></div>
   <div id="intervalDisplay"></div>
 
@@ -29,23 +33,24 @@
     const tuning = ['E', 'B', 'G', 'D', 'A', 'E']; // from high to low
 
     const intervals = [
-      { name: 'Unison', abbr: 'P1' },
-      { name: 'Minor 2nd', abbr: 'm2' },
-      { name: 'Major 2nd', abbr: 'M2' },
-      { name: 'Minor 3rd', abbr: 'm3' },
-      { name: 'Major 3rd', abbr: 'M3' },
-      { name: 'Perfect 4th', abbr: 'P4' },
-      { name: 'Tritone', abbr: 'TT' },
-      { name: 'Perfect 5th', abbr: 'P5' },
-      { name: 'Minor 6th', abbr: 'm6' },
-      { name: 'Major 6th', abbr: 'M6' },
-      { name: 'Minor 7th', abbr: 'm7' },
-      { name: 'Major 7th', abbr: 'M7' },
+      { name: 'Unison', abbr: 'P1', symbol: 'R' },
+      { name: 'Minor 2nd', abbr: 'm2', symbol: '♭2' },
+      { name: 'Major 2nd', abbr: 'M2', symbol: '△2' },
+      { name: 'Minor 3rd', abbr: 'm3', symbol: '♭3' },
+      { name: 'Major 3rd', abbr: 'M3', symbol: '△3' },
+      { name: 'Perfect 4th', abbr: 'P4', symbol: 'p4' },
+      { name: 'Tritone', abbr: 'TT', symbol: '♭5' },
+      { name: 'Perfect 5th', abbr: 'P5', symbol: 'p5' },
+      { name: 'Minor 6th', abbr: 'm6', symbol: '♭6' },
+      { name: 'Major 6th', abbr: 'M6', symbol: '△6' },
+      { name: 'Minor 7th', abbr: 'm7', symbol: '♭7' },
+      { name: 'Major 7th', abbr: 'M7', symbol: '△7' },
     ];
 
     const fretboard = document.getElementById('fretboard');
     const intervalDisplay = document.getElementById('intervalDisplay');
     const abbrToggle = document.getElementById('abbrToggle');
+    const symbolToggle = document.getElementById('symbolToggle');
 
     let rootNote = null;
     let targetNote = null;
@@ -57,7 +62,9 @@
 
     function getInterval(root, target) {
       const semitones = (notes.indexOf(target) - notes.indexOf(root) + 12) % 12;
-      return abbrToggle.checked ? intervals[semitones].abbr : intervals[semitones].name;
+      if (symbolToggle.checked) return intervals[semitones].symbol;
+      if (abbrToggle.checked) return intervals[semitones].abbr;
+      return intervals[semitones].name;
     }
 
     function renderFretboard() {
