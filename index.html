@@ -16,6 +16,7 @@
     .note.target { background: #d4edda; }
     #intervalDisplay { margin-top: 1rem; font-size: 1.2rem; }
     #abbrToggleLabel, #symbolToggleLabel { margin-right: 1rem; font-size: 0.95rem; }
+    #displayModeLabel { margin-left: 1rem; font-size: 0.95rem; }
     button { margin-top: 1rem; padding: 0.5rem 1rem; font-size: 1rem; }
     @media (max-width: 768px) {
       .note { padding: 6px; font-size: 0.85rem; }
@@ -34,6 +35,15 @@
       <input type="checkbox" id="symbolToggle">
       Use symbolic notation (♭, △, p)
     </label>
+    <label id="displayModeLabel">
+      Display mode:
+      <select id="noteDisplayMode">
+        <option value="sharp">Sharps (C#)</option>
+        <option value="flat">Flats (Db)</option>
+        <option value="both">Both (C#/Db)</option>
+        <option value="interval">Interval symbols from root</option>
+      </select>
+    </label>
     <button onclick="resetFretboard()">Reset</button>
   </div>
   <div class="fretboard-wrapper">
@@ -42,7 +52,8 @@
   <div id="intervalDisplay"></div>
 
   <script>
-    const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const flatNotes  = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
     const tuning = ['E', 'B', 'G', 'D', 'A', 'E'];
 
     const intervals = [
@@ -64,17 +75,23 @@
     const intervalDisplay = document.getElementById('intervalDisplay');
     const abbrToggle = document.getElementById('abbrToggle');
     const symbolToggle = document.getElementById('symbolToggle');
+    const displayMode = document.getElementById('noteDisplayMode');
 
     let rootNote = null;
+    let rootNoteAbs = null;
     let targetNote = null;
 
-    function getNoteAt(start, fret) {
-      const startIndex = notes.indexOf(start);
-      return notes[(startIndex + fret) % 12];
+    function getNoteAt(start, fret, useFlats = false) {
+      const scale = useFlats ? flatNotes : sharpNotes;
+      const startIndex = sharpNotes.indexOf(start);
+      const idx = (startIndex + fret) % 12;
+      return scale[idx];
     }
 
     function getInterval(root, target) {
-      const semitones = (notes.indexOf(target) - notes.indexOf(root) + 12) % 12;
+      const rootIdx = sharpNotes.indexOf(root);
+      const targetIdx = sharpNotes.indexOf(target);
+      const semitones = (targetIdx - rootIdx + 12) % 12;
       if (symbolToggle.checked) return intervals[semitones].symbol;
       if (abbrToggle.checked) return intervals[semitones].abbr;
       return intervals[semitones].name;
@@ -82,6 +99,10 @@
 
     function renderFretboard() {
       fretboard.innerHTML = '';
+      const mode = displayMode.value;
+      const showFlats = mode === 'flat' || mode === 'both';
+      const showBoth = mode === 'both';
+      const showIntervalSymbols = mode === 'interval';
 
       // First row: fret numbers
       fretboard.appendChild(document.createElement('div')); // Empty corner
@@ -92,7 +113,6 @@
         fretboard.appendChild(label);
       }
 
-      // Strings with notes
       tuning.forEach((openNote, stringIndex) => {
         const stringLabel = document.createElement('div');
         stringLabel.className = 'string-label';
@@ -100,13 +120,22 @@
         fretboard.appendChild(stringLabel);
 
         for (let fret = 0; fret <= 12; fret++) {
-          const note = getNoteAt(openNote, fret);
+          const sharp = getNoteAt(openNote, fret, false);
+          const flat = getNoteAt(openNote, fret, true);
+
           const noteDiv = document.createElement('div');
           noteDiv.className = 'note';
-          noteDiv.innerText = note;
-          noteDiv.dataset.note = note;
+          noteDiv.dataset.note = sharp;
           noteDiv.dataset.string = stringIndex;
           noteDiv.dataset.fret = fret;
+
+          if (showIntervalSymbols && rootNoteAbs) {
+            const interval = getInterval(rootNoteAbs, sharp);
+            noteDiv.innerText = interval;
+          } else {
+            noteDiv.innerText = showBoth && sharp !== flat ? `${sharp}/${flat}` : (showFlats ? flat : sharp);
+          }
+
           noteDiv.addEventListener('click', () => handleNoteClick(noteDiv));
           fretboard.appendChild(noteDiv);
         }
@@ -117,6 +146,7 @@
       const note = div.dataset.note;
       if (!rootNote) {
         rootNote = note;
+        rootNoteAbs = note;
         div.classList.add('selected');
         div.innerText = 'R';
         intervalDisplay.innerText = `Root note set: ${note}`;
@@ -133,10 +163,13 @@
 
     function resetFretboard() {
       rootNote = null;
+      rootNoteAbs = null;
       targetNote = null;
       renderFretboard();
       intervalDisplay.innerText = '';
     }
+
+    displayMode.addEventListener('change', renderFretboard);
 
     renderFretboard();
   </script>
