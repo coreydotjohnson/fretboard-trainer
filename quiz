@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Guitar Interval Trainer</title>
+  <style>
+    body {
+      box-sizing: border-box;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
+    .controls {
+      margin-bottom: 1rem;
+    }
+    .fretboard-wrapper {
+      display: inline-block;
+      overflow: visible;
+      padding: 0 10px;
+    }
+    .fretboard {
+      display: grid;
+      grid-template-columns: 40px repeat(13, 60px);
+      gap: 4px;
+    }
+    .fret-labels {
+      display: contents;
+      font-weight: bold;
+    }
+    .note {
+      transform-origin: center;
+      padding: 8px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      background-color: #f9f9f9;
+      cursor: pointer;
+      position: relative;
+      transition: background-color 0.2s, transform 0.1s;
+    }
+    .note:hover {
+      background-color: #e0f0ff;
+      transform: scale(1.05);
+      z-index: 1;
+    }
+    .note.fret-zero::before {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: black;
+      border-left: 1px solid #333;
+    }
+    .note.dot-marker {
+      background-color: #eef;
+      border: 2px dotted #88a;
+    }
+    .note.root {
+      background-color: #ffd700;
+      font-weight: bold;
+    }
+    .note.correct {
+      background-color: #c8f7c5;
+    }
+    .note.incorrect {
+      background-color: #f7c5c5;
+    }
+    #intervalDisplay {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+    }
+    #abbrToggleLabel, #symbolToggleLabel {
+      margin-right: 1rem;
+      font-size: 0.95rem;
+    }
+    button {
+      margin: 1rem auto;
+      display: block;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+    }
+    @media (max-width: 768px) {
+      .note {
+        padding: 6px;
+        font-size: 0.85rem;
+      }
+    }
+    .note.dot-marker:hover {
+      background-color: #e0f0ff;
+      transform: scale(1.05);
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <h1>Guitar Fretboard Interval Trainer</h1>
+  <p id="instructionText" style="font-weight: bold; font-size: 1.1rem; color: #003366; background-color: #e6f2ff; padding: 0.5rem; border-radius: 6px;">Click "New Question" to start the quiz.</p>
+
+  <fieldset style="margin-top: 1rem; border: 1px solid #ccc; padding: 0.5rem 1rem; display: inline-block; text-align: left;">
+    <legend><strong>Quiz Options</strong></legend>
+    <label id="abbrToggleLabel"><input type="checkbox" id="abbrToggle"> Use interval abbreviations</label>
+    <label id="symbolToggleLabel"><input type="checkbox" id="symbolToggle"> Use symbolic notation</label>
+    <label><input type="checkbox" id="revealRoot"> Reveal root note in quiz mode</label>
+  </fieldset>
+
+  <button id="newQuestion">New Question</button>
+
+  <div class="fretboard-wrapper">
+    <div class="fretboard" id="fretboard"></div>
+  </div>
+  <div id="intervalDisplay"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const sharpNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const tuning = ['E', 'B', 'G', 'D', 'A', 'E'];
+      const dotFrets = [3, 5, 7, 9, 12];
+
+      const intervals = [
+        { name: 'Unison', abbr: 'P1', symbol: 'R' },
+        { name: 'Minor 2nd', abbr: 'm2', symbol: '♭2' },
+        { name: 'Major 2nd', abbr: 'M2', symbol: '△2' },
+        { name: 'Minor 3rd', abbr: 'm3', symbol: '♭3' },
+        { name: 'Major 3rd', abbr: 'M3', symbol: '△3' },
+        { name: 'Perfect 4th', abbr: 'P4', symbol: 'p4' },
+        { name: 'Tritone', abbr: 'TT', symbol: '♭5' },
+        { name: 'Perfect 5th', abbr: 'P5', symbol: 'p5' },
+        { name: 'Minor 6th', abbr: 'm6', symbol: '♭6' },
+        { name: 'Major 6th', abbr: 'M6', symbol: '△6' },
+        { name: 'Minor 7th', abbr: 'm7', symbol: '♭7' },
+        { name: 'Major 7th', abbr: 'M7', symbol: '△7' }
+      ];
+
+      const fretboard = document.getElementById('fretboard');
+      const abbrToggle = document.getElementById('abbrToggle');
+      const symbolToggle = document.getElementById('symbolToggle');
+      const revealRootCheckbox = document.getElementById('revealRoot');
+      const intervalDisplay = document.getElementById('intervalDisplay');
+      const instructionText = document.getElementById('instructionText');
+      const newQuestionBtn = document.getElementById('newQuestion');
+
+      let rootNote = null;
+      let rootNoteAbs = null;
+      let targetIntervalIndex = null;
+      let remainingAnswers = [];
+      let correctCount = 0;
+
+      abbrToggle.addEventListener('change', () => {
+        if (abbrToggle.checked) symbolToggle.checked = false;
+      });
+      symbolToggle.addEventListener('change', () => {
+        if (symbolToggle.checked) abbrToggle.checked = false;
+      });
+
+      function getNoteAt(start, fret) {
+        const idx = (sharpNotes.indexOf(start) + fret) % 12;
+        return sharpNotes[idx];
+      }
+
+      function getSemitones(from, to) {
+        const i = sharpNotes.indexOf(from), j = sharpNotes.indexOf(to);
+        return (j - i + 12) % 12;
+      }
+
+      function getDisplayInterval(index) {
+        if (symbolToggle.checked) return intervals[index].symbol;
+        if (abbrToggle.checked) return intervals[index].abbr;
+        return intervals[index].name;
+      }
+
+      function startQuiz() {
+        rootNote = sharpNotes[Math.floor(Math.random() * 12)];
+        rootNoteAbs = rootNote;
+        targetIntervalIndex = Math.floor(Math.random() * intervals.length);
+        const targetLabel = getDisplayInterval(targetIntervalIndex);
+
+        remainingAnswers = [];
+        correctCount = 0;
+
+        instructionText.innerText = `Click all notes that are ${targetLabel} from ${rootNote}.`;
+        renderFretboard(true);
+        intervalDisplay.innerText = `Correct: ${correctCount}/${remainingAnswers.length}`;
+      }
+
+      function renderFretboard(isQuiz = false) {
+        fretboard.innerHTML = '';
+        fretboard.appendChild(document.createElement('div'));
+        for (let fret = 0; fret <= 12; fret++) {
+          const label = document.createElement('div');
+          label.className = 'fret-label';
+          label.innerText = fret;
+          fretboard.appendChild(label);
+        }
+
+        tuning.forEach((openNote, stringIndex) => {
+          const stringLabel = document.createElement('div');
+          stringLabel.style.visibility = 'hidden';
+          fretboard.appendChild(stringLabel);
+
+          for (let fret = 0; fret <= 12; fret++) {
+            const sharp = getNoteAt(openNote, fret);
+            const noteDiv = document.createElement('div');
+            noteDiv.className = 'note';
+            if (fret === 0) noteDiv.classList.add('fret-zero');
+            if (dotFrets.includes(fret)) noteDiv.classList.add('dot-marker');
+
+            const intervalIndex = getSemitones(rootNoteAbs, sharp);
+            const isAnswer = intervalIndex === targetIntervalIndex;
+
+            if (isQuiz) {
+              if (isAnswer) remainingAnswers.push(noteDiv);
+              noteDiv.innerText = (sharp === rootNoteAbs && revealRootCheckbox.checked) ? sharp : '?';
+              noteDiv.addEventListener('click', () => {
+                if (noteDiv.classList.contains('correct') || noteDiv.classList.contains('incorrect')) return;
+                if (isAnswer) {
+                  noteDiv.classList.add('correct');
+                  noteDiv.innerText = getDisplayInterval(intervalIndex);
+                  correctCount++;
+                } else {
+                  noteDiv.classList.add('incorrect');
+                  noteDiv.innerText = getDisplayInterval(intervalIndex);
+                }
+                intervalDisplay.innerText = `Correct: ${correctCount}/${remainingAnswers.length}`;
+              });
+            } else {
+              noteDiv.innerText = sharp;
+            }
+
+            fretboard.appendChild(noteDiv);
+          }
+        });
+      }
+
+      newQuestionBtn.addEventListener('click', startQuiz);
+      renderFretboard();
+    });
+  </script>
+</body>
+</html>
