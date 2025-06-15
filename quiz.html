@@ -23,10 +23,6 @@
       grid-template-columns: 40px repeat(13, 60px);
       gap: 4px;
     }
-    .fret-labels {
-      display: contents;
-      font-weight: bold;
-    }
     .note {
       transform-origin: center;
       padding: 8px;
@@ -66,9 +62,9 @@
     .note.incorrect {
       background-color: #f7c5c5;
     }
-    #intervalDisplay {
+    #intervalDisplay, #streakDisplay {
       margin-top: 1rem;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
     }
     #abbrToggleLabel, #symbolToggleLabel {
       margin-right: 1rem;
@@ -109,7 +105,13 @@
   <div class="fretboard-wrapper">
     <div class="fretboard" id="fretboard"></div>
   </div>
+
   <div id="intervalDisplay"></div>
+  <div id="streakDisplay"></div>
+
+  <div style="margin-top: 2rem;">
+    <button class="nav-button" onclick="window.location.href='index.html'">Return to Practice Mode</button>
+  </div>
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
@@ -137,6 +139,7 @@
       const symbolToggle = document.getElementById('symbolToggle');
       const revealRootCheckbox = document.getElementById('revealRoot');
       const intervalDisplay = document.getElementById('intervalDisplay');
+      const streakDisplay = document.getElementById('streakDisplay');
       const instructionText = document.getElementById('instructionText');
       const newQuestionBtn = document.getElementById('newQuestion');
 
@@ -145,6 +148,8 @@
       let targetIntervalIndex = null;
       let remainingAnswers = [];
       let correctCount = 0;
+      let currentStreak = 0;
+      let highestStreak = 0;
 
       abbrToggle.addEventListener('change', () => {
         if (abbrToggle.checked) symbolToggle.checked = false;
@@ -169,6 +174,10 @@
         return intervals[index].name;
       }
 
+      function updateStreakDisplay() {
+        streakDisplay.innerText = `Current Streak: ${currentStreak} | Highest Streak: ${highestStreak}`;
+      }
+
       function startQuiz() {
         rootNote = sharpNotes[Math.floor(Math.random() * 12)];
         rootNoteAbs = rootNote;
@@ -177,10 +186,12 @@
 
         remainingAnswers = [];
         correctCount = 0;
+        currentStreak = 0;
 
         instructionText.innerText = `Click all notes that are ${targetLabel} from ${rootNote}.`;
         renderFretboard(true);
         intervalDisplay.innerText = `Correct: ${correctCount}/${remainingAnswers.length}`;
+        updateStreakDisplay();
       }
 
       function renderFretboard(isQuiz = false) {
@@ -217,11 +228,15 @@
                   noteDiv.classList.add('correct');
                   noteDiv.innerText = getDisplayInterval(intervalIndex);
                   correctCount++;
+                  currentStreak++;
+                  if (currentStreak > highestStreak) highestStreak = currentStreak;
                 } else {
                   noteDiv.classList.add('incorrect');
                   noteDiv.innerText = getDisplayInterval(intervalIndex);
+                  currentStreak = 0;
                 }
                 intervalDisplay.innerText = `Correct: ${correctCount}/${remainingAnswers.length}`;
+                updateStreakDisplay();
               });
             } else {
               noteDiv.innerText = sharp;
