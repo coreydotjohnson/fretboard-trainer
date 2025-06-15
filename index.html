@@ -5,14 +5,22 @@
   <title>Guitar Interval Trainer</title>
   <style>
     body {
-    box-sizing: border-box; font-family: sans-serif; text-align: center; padding: 2rem; }
+      box-sizing: border-box;
+      font-family: sans-serif;
+      text-align: center;
+      padding: 2rem;
+    }
     .controls { margin-bottom: 1rem; }
     .fretboard-wrapper {
       display: inline-block;
       overflow: visible;
       padding: 0 10px;
     }
-    .fretboard { display: grid; grid-template-columns: 40px repeat(13, 60px); gap: 4px; }
+    .fretboard {
+      display: grid;
+      grid-template-columns: 40px repeat(13, 60px);
+      gap: 4px;
+    }
     .fret-labels { display: contents; font-weight: bold; }
     .note {
       transform-origin: center;
@@ -63,34 +71,35 @@
       .note { padding: 6px; font-size: 0.85rem; }
     }
     .note.dot-marker:hover {
-    background-color: #e0f0ff;
-    transform: scale(1.05);
-    z-index: 1;
-  }
-</style>
+      background-color: #e0f0ff;
+      transform: scale(1.05);
+      z-index: 1;
+    }
+  </style>
 </head>
 <body>
   <h1>Guitar Fretboard Interval Trainer</h1>
   <p id="instructionText" style="font-weight: bold; font-size: 1.1rem; color: #003366; background-color: #e6f2ff; padding: 0.5rem; border-radius: 6px;">Click a note to set the root, then another note to see the interval.</p>
   <fieldset style="margin-top: 1rem; border: 1px solid #ccc; padding: 0.5rem 1rem; display: inline-block; text-align: left;">
-      <legend><strong>Interval Display Options</strong></legend>
-      <label id="abbrToggleLabel"><input type="checkbox" id="abbrToggle"> Use interval abbreviations</label>
-      <label id="symbolToggleLabel"><input type="checkbox" id="symbolToggle"> Use symbolic notation</label>
-      <label id="keepRootLabel"><input type="checkbox" id="keepRootNote"> Keep root note label when using interval symbols</label>
-    </fieldset>
-    <label id="displayModeLabel">
-      Note name style:
-      <select id="noteDisplayMode">
-        <option value="sharp">Sharps (C#)</option>
-        <option value="flat">Flats (Db)</option>
-        <option value="both">Both (C#/Db)</option>
-              </select>
-    </label>
-    <button id="resetButton">Reset</button>
-  <div class="fretboard-wrapper" style="margin: 0 auto;">
+    <legend><strong>Interval Display Options</strong></legend>
+    <label id="abbrToggleLabel"><input type="checkbox" id="abbrToggle"> Use interval abbreviations</label>
+    <label id="symbolToggleLabel"><input type="checkbox" id="symbolToggle"> Use symbolic notation</label>
+    <label id="keepRootLabel"><input type="checkbox" id="keepRootNote"> Keep root note label when using interval symbols</label>
+  </fieldset>
+  <label id="displayModeLabel">
+    Note name style:
+    <select id="noteDisplayMode">
+      <option value="sharp">Sharps (C#)</option>
+      <option value="flat">Flats (Db)</option>
+      <option value="both">Both (C#/Db)</option>
+    </select>
+  </label>
+  <button id="resetButton">Reset</button>
+  <div class="fretboard-wrapper">
     <div class="fretboard" id="fretboard"></div>
   </div>
   <div id="intervalDisplay"></div>
+  <button onclick="window.location.href='quiz.html'">Go to Quiz Mode</button>
 
   <script>
     window.addEventListener('DOMContentLoaded', () => {
@@ -156,16 +165,6 @@
           return;
         }
 
-        const mode = displayMode.value;
-
-        if (mode === 'interval') {
-          rootNote = note;
-          rootNoteAbs = note;
-          intervalDisplay.innerText = `Root note set: ${note}`;
-          renderFretboard();
-          return;
-        }
-
         if (!rootNoteAbs) {
           rootNote = note;
           rootNoteAbs = note;
@@ -198,12 +197,6 @@
         const showFlats = mode === 'flat' || mode === 'both';
         const showBoth = mode === 'both';
         const showIntervalSymbols = abbrToggle.checked || symbolToggle.checked;
-
-        if ((abbrToggle.checked || symbolToggle.checked)) {
-          instructionText.innerText = 'Click a note to set the root note.';
-        } else if (!targetNote) {
-          instructionText.innerText = 'Click a note to set the root, then another note to see the interval.';
-        }
 
         fretboard.appendChild(document.createElement('div'));
         for (let fret = 0; fret <= 12; fret++) {
